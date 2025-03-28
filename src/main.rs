@@ -1,8 +1,11 @@
 use async_stream::stream;
 use bytes::Bytes;
-use flareon::request::Request;
-use flareon::router::Route;
-use flareon::{Body, Error, FlareonApp, FlareonProject, Response, StatusCode};
+use cot::config::ProjectConfig;
+use cot::project::RegisterAppsContext;
+use cot::request::Request;
+use cot::response::{Response, ResponseExt};
+use cot::router::{Route, Router};
+use cot::{AppBuilder, Body, Bootstrapper, Error, StatusCode};
 use statrs::statistics::Statistics;
 use tokio::net::TcpSocket;
 
@@ -25,7 +28,7 @@ async fn return_payload(_request: Request) -> Result<Response, Error> {
             times.push(diff.num_seconds() as f64 + diff.subsec_nanos() as f64 / NANOS_IN_SEC);
             last = now;
         }
-            
+
         times.sort_by(|a, b| a.total_cmp(b));
         let max = times.pop().unwrap();
         let variance = times.variance();
@@ -43,25 +46,46 @@ async fn return_payload(_request: Request) -> Result<Response, Error> {
     Ok(Response::new_html(StatusCode::OK, Body::streaming(s)))
 }
 
+struct AttackApp;
+
+impl cot::App for AttackApp {
+    fn name(&self) -> &'static str {
+        env!("CARGO_PKG_NAME")
+    }
+
+    fn router(&self) -> Router {
+        Router::with_urls([Route::with_handler("/", return_payload)])
+    }
+}
+
+struct AttackProject;
+
+impl cot::Project for AttackProject {
+    fn register_apps(&self, apps: &mut AppBuilder, _context: &RegisterAppsContext) {
+        apps.register_with_views(AttackApp, "");
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let attack_app = FlareonApp::builder()
-        .urls([Route::with_handler("/", return_payload)])
-        .build()?;
-
-    let flareon_project = FlareonProject::builder()
-        .register_app_with_views(attack_app, "")
-        .build();
-
     let addr = "127.0.0.1:8000".parse()?;
     let socket = TcpSocket::new_v4()?;
     socket.set_reuseaddr(true)?;
+    #[cfg(all(unix, not(target_os = "solaris"), not(target_os = "illumos")))]
     socket.set_reuseport(true)?;
     socket.set_nodelay(true)?;
     socket.bind(addr)?;
     socket.set_send_buffer_size(SEND_BUFFER_SIZE)?;
 
-    flareon::run_at(flareon_project, socket.listen(MAX_CONNECTIONS)?).await?;
+    // we need to bootstrap the project manually to use cot::run_at
+    let project = AttackProject;
+    let config = ProjectConfig::default();
+    let bootstrapper = Bootstrapper::new(project)
+        .with_config(config)
+        .boot()
+        .await?;
+
+    cot::run_at(bootstrapper, socket.listen(MAX_CONNECTIONS)?).await?;
 
     Ok(())
 }

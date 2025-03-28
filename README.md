@@ -44,4 +44,4 @@ The project is dual-licensed under the [MIT](LICENSE-MIT) and [Apache-2.0](LICEN
 
 The attack is based on [the blog post published on idontplaydarts.com](http://web.archive.org/web/20240423134349/https://www.idontplaydarts.com/2016/04/detecting-curl-pipe-bash-server-side/).
 
-The source code uses an experimental web framework [Flareon](https://github.com/flareon-rs/flareon).
+The source code uses an experimental web framework [Cot](https://cot.rs).
