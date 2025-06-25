@@ -2,10 +2,9 @@ use async_stream::stream;
 use bytes::Bytes;
 use cot::config::ProjectConfig;
 use cot::project::RegisterAppsContext;
-use cot::request::Request;
-use cot::response::{Response, ResponseExt};
+use cot::response::{IntoResponse, Response};
 use cot::router::{Route, Router};
-use cot::{AppBuilder, Body, Bootstrapper, Error, StatusCode};
+use cot::{AppBuilder, Body, Bootstrapper, StatusCode};
 use statrs::statistics::Statistics;
 use tokio::net::TcpSocket;
 
@@ -14,7 +13,7 @@ const SEND_BUFFER_SIZE: u32 = 87380;
 const NANOS_IN_SEC: f64 = 1_000_000_000.0;
 const CHUNK_NUM: usize = 128;
 
-async fn return_payload(_request: Request) -> Result<Response, Error> {
+async fn return_payload() -> impl IntoResponse {
     let s = stream! {
         yield Ok(Bytes::from("echo Hello!\nsleep 2\n"));
 
@@ -43,7 +42,9 @@ async fn return_payload(_request: Request) -> Result<Response, Error> {
         }
     };
 
-    Ok(Response::new_html(StatusCode::OK, Body::streaming(s)))
+    Response::new(Body::streaming(s))
+        .with_status(StatusCode::OK)
+        .with_content_type("text/plain; charset=utf-8")
 }
 
 struct AttackApp;
